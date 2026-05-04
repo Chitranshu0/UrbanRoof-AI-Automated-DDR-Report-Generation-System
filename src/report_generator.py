@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from typing import Dict, Any
 
@@ -35,27 +36,55 @@ def extract_section(md_content: str, header_keyword: str) -> str:
     return '\n'.join(content).strip()
 
 def format_images(area):
-    images = [img for img in area.get("images", []) if img and img.strip().lower() not in {"image not available", "image image"}]
+    images = [img for img in area.get("images", []) if img and img.strip() and img.strip().lower() not in {"image not available", "image image"}]
     if not images:
         return "Image Not Available"
-    return "\n".join(
-        [f"![{area.get('name', 'Area')}]({img})" for img in images[:2]]
-    )
+    return "\n".join([f"![{area.get('name', 'Area')}]({img})" for img in images[:2]])
+
 
 def clean_text(text: str) -> str:
     if not text:
         return ""
+
+    text = str(text).strip()
+    if not text:
+        return ""
+
+    text = " ".join(text.split())
+    if ":" in text and len(text.split()) < 5:
+        return ""
+
+    lower_text = text.lower()
+    noise_patterns = [
+        "leakage during:",
+        "re any major or minor cracks",
+        "re any major or minor crack",
+        "bathroom bathroom",
+        "image image",
+        "broken ocr",
+        "observed.",
+    ]
+    for pattern in noise_patterns:
+        if pattern in lower_text:
+            return ""
+
+    text = re.sub(r"\bwc\b", "WC area", text, flags=re.IGNORECASE)
+    text = re.sub(r"nahani trap/brickbat coba under", "Nahani trap or brickbat coba layer", text, flags=re.IGNORECASE)
+    text = re.sub(r"nahani trap/brickbat coba", "Nahani trap or brickbat coba", text, flags=re.IGNORECASE)
+    text = re.sub(r"nahani trap/brickbat", "Nahani trap or brickbat", text, flags=re.IGNORECASE)
+
     text = text.strip()
+    if not text:
+        return ""
+
     words = text.split()
     if len(words) == 2 and words[0].lower() == words[1].lower():
         text = words[0]
-    text = text.replace("wc", "WC area")
-    text = text.replace("nahani trap/brickbat coba under", "Nahani trap or brickbat coba layer")
-    text = text.replace("observed.", "observed")
-    text = text.strip()
-    text = text.capitalize()
+
+    text = text[0].upper() + text[1:]
     if not text.endswith("."):
         text += "."
+
     return text
 
 
@@ -64,12 +93,14 @@ def clean_observations(obs_list):
     seen = set()
     for o in obs_list:
         o = clean_text(o)
-        if not o or len(o) < 10:
+        if not o or len(o) < 12:
             continue
+
         key = o.lower()
         if key not in seen:
             cleaned.append(o)
             seen.add(key)
+
     return cleaned[:8]
 
 
@@ -77,19 +108,38 @@ def format_missing_info(missing_list):
     if not missing_list:
         return "* None reported."
 
-    conflict_present = any("conflict" in str(item).lower() for item in missing_list)
-    non_conflicts = [str(item).strip() for item in missing_list if item and "conflict" not in str(item).lower()]
+    cleaned_items = []
+    conflict_present = False
+
+    for item in missing_list:
+        if not item:
+            continue
+        item_text = str(item).strip()
+        if not item_text:
+            continue
+
+        if "conflict" in item_text.lower() or "thermal data" in item_text.lower():
+            conflict_present = True
+            continue
+
+        cleaned = clean_text(item_text)
+        if cleaned and len(cleaned) >= 12:
+            cleaned_items.append(cleaned)
 
     if conflict_present:
-        lines = ["* Thermal data does not consistently confirm observed leakage across multiple areas, suggesting intermittent or concealed moisture sources."]
-        if non_conflicts:
-            for item in non_conflicts:
-                clean_item = clean_text(item)
-                if clean_item:
-                    lines.append(f"* {clean_item}")
-        return "\n".join(lines)
+        return "* Thermal data does not consistently confirm leakage across multiple areas, suggesting intermittent or concealed moisture sources."
 
-    return "\n".join([f"* {clean_text(m)}" for m in missing_list if m and str(m).strip()])
+    if cleaned_items:
+        unique_items = []
+        seen = set()
+        for item in cleaned_items:
+            key = item.lower()
+            if key not in seen:
+                unique_items.append(item)
+                seen.add(key)
+        return "\n".join(f"* {item}" for item in unique_items[:8])
+
+    return "* None reported."
 
 
 def generate_report(data: dict) -> str:
