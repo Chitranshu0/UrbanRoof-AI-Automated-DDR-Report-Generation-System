@@ -62,6 +62,35 @@ migrate_legacy_sample_files()
 st.title("🏠 UrbanRoof AI: Automated DDR Report Generation System")
 st.markdown("Generate a **Detailed Diagnostic Report (DDR)** from Inspection & Thermal PDFs")
 
+# -------------------- File Input (HIGH PRIORITY) --------------------
+st.markdown("---")
+st.subheader("📄 Input")
+
+insp_path = None
+therm_path = None
+
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("**Upload Inspection PDF**")
+    st.markdown("*Drag and drop file here*  \nLimit 200MB per file • PDF")
+    inspection_file = st.file_uploader("Inspection PDF", type=["pdf"], key="insp", label_visibility="collapsed")
+
+with col2:
+    st.markdown("**Upload Thermal PDF**")
+    st.markdown("*Drag and drop file here*  \nLimit 200MB per file • PDF")
+    thermal_file = st.file_uploader("Thermal PDF", type=["pdf"], key="therm", label_visibility="collapsed")
+
+if inspection_file and thermal_file:
+    insp_path = os.path.join(DATA_DIR, "uploaded_inspection.pdf")
+    therm_path = os.path.join(DATA_DIR, "uploaded_thermal.pdf")
+    with open(insp_path, "wb") as f:
+        f.write(inspection_file.getbuffer())
+    with open(therm_path, "wb") as f:
+        f.write(thermal_file.getbuffer())
+    st.success("✅ Both files uploaded successfully!")
+
+st.markdown("---")
+
 st.info(
     """
 🎯 **AI Generalist Assignment Submission**
@@ -136,9 +165,6 @@ use_sample = st.sidebar.checkbox("Use Sample Data")
 show_sample = st.sidebar.checkbox("Preview Sample PDFs")
 show_json = st.sidebar.checkbox("Show Extracted JSON")
 
-insp_path = None
-therm_path = None
-
 # -------------------- Sample Validation --------------------
 insp_ok, insp_msg = check_file(sample_insp, "Inspection sample file")
 therm_ok, therm_msg = check_file(sample_therm, "Thermal sample file")
@@ -151,27 +177,17 @@ if use_sample and (not insp_ok or not therm_ok):
         st.text(therm_msg)
     st.stop()
 
-# -------------------- File Input --------------------
-col1, col2 = st.columns(2)
-with col1:
-    st.subheader("📄 Input")
-    if use_sample:
-        st.success("Using preloaded sample data")
-        insp_path = sample_insp
-        therm_path = sample_therm
-    else:
-        inspection_file = st.file_uploader("Upload Inspection PDF", type=["pdf"])
-        thermal_file = st.file_uploader("Upload Thermal PDF", type=["pdf"])
+# -------------------- Sample Overrides --------------------
+if use_sample:
+    insp_path = sample_insp
+    therm_path = sample_therm
+    st.info("✅ Using preloaded sample data")
 
-        if inspection_file and thermal_file:
-            insp_path = os.path.join(DATA_DIR, "uploaded_inspection.pdf")
-            therm_path = os.path.join(DATA_DIR, "uploaded_thermal.pdf")
-            with open(insp_path, "wb") as f:
-                f.write(inspection_file.getbuffer())
-            with open(therm_path, "wb") as f:
-                f.write(thermal_file.getbuffer())
 
 # -------------------- Preview PDFs --------------------
+insp_ok, insp_msg = check_file(sample_insp, "Inspection sample file")
+therm_ok, therm_msg = check_file(sample_therm, "Thermal sample file")
+
 if use_sample and show_sample:
     st.subheader("📂 Sample Data Preview")
     colA, colB = st.columns(2)
@@ -190,6 +206,7 @@ if use_sample and show_sample:
                 st.download_button("Download Thermal Sample", f.read(), file_name="sample_thermal.pdf")
     else:
         colB.warning("Thermal sample unavailable.")
+
 
 # -------------------- Generate ----------------
 if st.button("🚀 Generate DDR Report"):
