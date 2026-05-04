@@ -1,28 +1,32 @@
 # src/structurer.py
-
 import re
 import logging
 from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
 
 class TextStructurer:
     """
     Converts raw extracted data into a structured DDR-ready JSON.
+    Filters noise, checks relevance, and categorizes by area.
     """
 
-    # Synonyms for better area detection
     AREA_SYNONYMS = {
-        "Living Room": ["living room", "hall", "lounge"],
-        "Bedroom": ["bedroom", "bed room"],
-        "Kitchen": ["kitchen", "cooking area"],
-        "Bathroom": ["bathroom", "washroom", "toilet"],
-        "Wall": ["wall", "external wall", "internal wall"],
-        "Roof": ["roof", "ceiling", "top slab"],
-        "Basement": ["basement", "lower ground"]
+        "Bathroom": ["bathroom", "washroom", "toilet", "bath"],
+        "Balcony": ["balcony", "deck"],
+        "Terrace": ["terrace", "roof", "top"],
+        "External Wall": ["external wall", "outer wall", "facade", "wall"],
     }
+    
+    RELEVANT_KEYWORDS = [
+        "dampness", "crack", "leakage", "seepage", "efflorescence", 
+        "spalling", "vegetation", "gap", "gaps", "hollowness", "water ingress"
+    ]
+    
+    NOISE_KEYWORDS = [
+        "section", "page", "table of content", "input 1", 
+        "yes", "no", "not sure"
+    ]
 
     def structure(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("Structuring raw text into DDR-ready JSON format.")
@@ -31,9 +35,11 @@ class TextStructurer:
         thermal_text = raw_data.get("thermal_text", "")
         images = raw_data.get("images", [])
 
-        # Split text into sentences
-        inspection_sentences = self._split_sentences(inspection_text)
-        thermal_sentences = self._split_sentences(thermal_text)
+        # Clean and split sentences
+        inspection_sentences = self._clean_and_filter(inspection_text)
+        thermal_sentences = self._clean_and_filter(thermal_text)
+        
+        logger.info(f"Cleaned sentences count: {len(inspection_sentences) + len(thermal_sentences)}")
 
         areas_dict = {}
 
@@ -50,25 +56,36 @@ class TextStructurer:
                     "images": []
                 }
 
-        # Fallback if no areas detected
-        if not areas_dict:
-            logger.warning("No specific areas detected. Using fallback.")
-            areas_dict["General Property"] = {
-                "name": "General Property",
-                "inspection_findings": inspection_sentences,
-                "thermal_findings": thermal_sentences,
+        # Gather leftover sentences into General
+        assigned_insp = set([f for a in areas_dict.values() for f in a["inspection_findings"]])
+        assigned_therm = set([f for a in areas_dict.values() for f in a["thermal_findings"]])
+        
+        general_insp = [s for s in inspection_sentences if s not in assigned_insp]
+        general_therm = [s for s in thermal_sentences if s not in assigned_therm]
+        
+        if general_insp or general_therm or not areas_dict:
+            areas_dict["General"] = {
+                "name": "General",
+                "inspection_findings": general_insp,
+                "thermal_findings": general_therm,
                 "images": []
             }
 
         areas_list = list(areas_dict.values())
 
-        # Improved image distribution (round-robin)
-        if areas_list:
+        # Improved image distribution (round-robin) up to 3 per area
+        if areas_list and images:
             for i, img in enumerate(images):
                 area_index = i % len(areas_list)
-                areas_list[area_index]["images"].append(img["path"])
+                if len(areas_list[area_index]["images"]) < 3:
+                    areas_list[area_index]["images"].append(img["path"])
 
-        # Build DDR structure (LLM will fill later)
+        # Mark "Image Not Available" for areas with no images
+        for area in areas_list:
+            if not area["images"]:
+                area["images"] = ["Image Not Available"]
+
+        # Build final expected structure
         structured_output = {
             "property_summary": "Not Available",
             "areas": areas_list,
@@ -77,32 +94,44 @@ class TextStructurer:
                 "level": "Not Available",
                 "reason": "Not Available"
             },
-            "recommendations": [],
-            "additional_notes": [],
+            "recommendations": ["Not Available"],
             "missing_info": []
         }
 
+        logger.info("structuring complete")
         return structured_output
 
-    def _split_sentences(self, text: str) -> List[str]:
-        """
-        Improved sentence splitting.
-        Handles ., !, ?, and newlines.
-        """
+    def _clean_and_filter(self, text: str) -> List[str]:
         if not text:
             return []
-
-        sentences = re.split(r'(?<=[.!?])\s+|\n+', text)
-        return [s.strip() for s in sentences if s.strip()]
+            
+        # Split sentences
+        raw_sentences = re.split(r'(?<=[.!?])\s+|\n+', text)
+        cleaned = []
+        
+        for s in raw_sentences:
+            s = s.strip()
+            # Basic noise filtering
+            if len(s) < 20: continue
+            
+            s_lower = s.lower()
+            if any(noise in s_lower for noise in self.NOISE_KEYWORDS): continue
+            
+            # Relevance filtering
+            if not any(kw in s_lower for kw in self.RELEVANT_KEYWORDS): continue
+            
+            # Fix broken sentences/spaces (e.g. "of Flat No.")
+            s = re.sub(r'\s+', ' ', s)
+            if "of flat no" in s_lower and len(s) < 30: continue
+            
+            cleaned.append(s)
+            
+        # Remove duplicates while preserving order
+        return list(dict.fromkeys(cleaned))
 
     def _match_sentences(self, sentences: List[str], keywords: List[str]) -> List[str]:
-        """
-        Match sentences containing any keyword.
-        """
         matches = []
         for sentence in sentences:
-            for kw in keywords:
-                if kw.lower() in sentence.lower():
-                    matches.append(sentence)
-                    break
+            if any(kw.lower() in sentence.lower() for kw in keywords):
+                matches.append(sentence)
         return matches

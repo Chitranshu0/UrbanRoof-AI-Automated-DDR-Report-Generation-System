@@ -1,7 +1,19 @@
 import streamlit as st
 import os
 import json
+import shutil
 from src.pipeline import DDRPipeline
+
+def cleanup():
+    try:
+        if os.path.exists("images"):
+            shutil.rmtree("images")
+        if os.path.exists("outputs"):
+            shutil.rmtree("outputs")
+        os.makedirs("images", exist_ok=True)
+        os.makedirs("outputs", exist_ok=True)
+    except Exception as e:
+        print("ERROR:", str(e))
 
 # Ensure necessary directories exist
 os.makedirs("data", exist_ok=True)
@@ -39,38 +51,42 @@ if st.button("Generate DDR Report"):
             pipeline = DDRPipeline()
             try:
                 result = pipeline.run(insp_path, therm_path)
-                report_path = result.get("report_path", "outputs/DDR_Report.md")
+                report_path = result.get("report_path") if result else None
                 
-                st.success("Report generated successfully!")
-                
-                st.subheader("Downloads")
-                c1, c2 = st.columns(2)
-                
-                # Check if report exists
-                if os.path.exists(report_path):
-                    with open(report_path, "rb") as f:
-                        c1.download_button(
-                            label="Download Markdown Report",
-                            data=f,
-                            file_name="DDR_Report.md",
-                            mime="text/markdown"
-                        )
-                
-                json_path = "outputs/sample_output.json"
-                if os.path.exists(json_path):
-                    with open(json_path, "rb") as f:
-                        c2.download_button(
-                            label="Download JSON Data",
-                            data=f,
-                            file_name="ddr_data.json",
-                            mime="application/json"
-                        )
-                
-                st.subheader("Report Output")
-                if os.path.exists(report_path):
+                if not report_path or not os.path.exists(report_path):
+                    st.error("Report generation failed. Please try again.")
+                else:
+                    st.success("Report generated successfully!")
+                    
+                    st.subheader("Downloads")
+                    c1, c2 = st.columns(2)
+                    
                     with open(report_path, "r", encoding="utf-8") as f:
                         md_content = f.read()
+                        
+                    c1.download_button(
+                        label="Download Markdown Report",
+                        data=md_content,
+                        file_name="DDR_Report.md",
+                        mime="text/markdown",
+                        on_click=cleanup
+                    )
+                    
+                    json_path = "outputs/sample_output.json"
+                    if os.path.exists(json_path):
+                        with open(json_path, "r", encoding="utf-8") as f:
+                            json_content = f.read()
+                        c2.download_button(
+                            label="Download JSON Data",
+                            data=json_content,
+                            file_name="ddr_data.json",
+                            mime="application/json",
+                            on_click=cleanup
+                        )
+                    
+                    st.subheader("Report Output")
                     st.markdown(md_content)
                 
             except Exception as e:
+                print("ERROR:", str(e))
                 st.error(f"Pipeline execution failed: {e}")

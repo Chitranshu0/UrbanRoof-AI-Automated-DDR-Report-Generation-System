@@ -45,10 +45,12 @@ class DDRPipeline:
         # Define Nodes
         def extract_node(state: PipelineState):
             raw = self.extractor.extract(state["inspection_pdf"], state["thermal_pdf"])
+            logger.info("extraction complete")
             return {"raw_data": raw}
 
         def structure_node(state: PipelineState):
             structured = self.structurer.structure(state["raw_data"])
+            logger.info("structuring complete")
             return {"structured_data": structured}
 
         def validate_node(state: PipelineState):
@@ -57,10 +59,12 @@ class DDRPipeline:
 
         def reason_node(state: PipelineState):
             enriched = self.reasoner.generate_insights(state["validated_data"])
+            logger.info("LLM response received")
             return {"enriched_data": enriched}
 
         def generate_report_node(state: PipelineState):
             path = self.report_generator.generate(state["enriched_data"])
+            logger.info("report generated")
             return {"report_path": path}
 
         # Add Nodes
@@ -81,30 +85,35 @@ class DDRPipeline:
         return workflow.compile()
 
     def run(self, inspection_pdf: str, thermal_pdf: str):
-        logger.info("Starting pipeline execution.")
-        
-        # Initial State
-        initial_state = {
-            "inspection_pdf": inspection_pdf,
-            "thermal_pdf": thermal_pdf,
-            "raw_data": {},
-            "structured_data": {},
-            "enriched_data": {},
-            "validated_data": {},
-            "report_path": ""
-        }
-        
-        # Execute workflow
-        result = self.graph.invoke(initial_state)
-        
-        logger.info(f"Pipeline finished successfully. Report at: {result['report_path']}")
-        
-        # Save final enriched JSON output for tracking
-        os.makedirs("outputs", exist_ok=True)
-        with open("outputs/sample_output.json", "w", encoding="utf-8") as f:
-            json.dump(result["enriched_data"], f, indent=2)
+        try:
+            logger.info("Starting pipeline execution.")
             
-        return result
+            # Initial State
+            initial_state = {
+                "inspection_pdf": inspection_pdf,
+                "thermal_pdf": thermal_pdf,
+                "raw_data": {},
+                "structured_data": {},
+                "enriched_data": {},
+                "validated_data": {},
+                "report_path": ""
+            }
+            
+            # Execute workflow
+            result = self.graph.invoke(initial_state)
+            
+            logger.info(f"Pipeline finished successfully. Report at: {result['report_path']}")
+            
+            # Save final enriched JSON output for tracking
+            os.makedirs("outputs", exist_ok=True)
+            with open("outputs/sample_output.json", "w", encoding="utf-8") as f:
+                json.dump(result["enriched_data"], f, indent=2)
+                
+            return result
+        except Exception as e:
+            print("ERROR:", str(e))
+            logger.error(f"Pipeline execution failed: {e}")
+            return None
 
 def main():
     parser = argparse.ArgumentParser(description="Automated DDR Report Generation Pipeline")
