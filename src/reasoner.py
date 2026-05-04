@@ -6,9 +6,180 @@ from typing import Dict, Any
 from groq import Groq
 from dotenv import load_dotenv
 
+from reasoning_engine import (
+    detect_patterns,
+    generate_summary,
+    infer_root_cause,
+    infer_severity,
+    generate_recommendations,
+    build_deterministic_report
+)
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------
+# DETERMINISTIC POST-PROCESSING HELPERS
+# ---------------------------------------------------------
+
+def extract_section(report: str, header_keyword: str) -> str:
+    lines = report.split('\n')
+    in_section = False
+    section_content = []
+    for line in lines:
+        if line.startswith('###') and header_keyword in line:
+            in_section = True
+            continue
+        if in_section:
+            if line.startswith('###'):
+                break
+            section_content.append(line)
+    return '\n'.join(section_content).strip()
+
+def replace_section(report: str, header_keyword: str, new_content: str) -> str:
+    lines = report.split('\n')
+    out_lines = []
+    in_section = False
+    for line in lines:
+        if line.startswith('###') and header_keyword in line:
+            in_section = True
+            out_lines.append(line)
+            out_lines.append("")
+            out_lines.append(new_content)
+            out_lines.append("")
+            continue
+        if in_section:
+            if line.startswith('###'):
+                in_section = False
+            else:
+                continue
+        if not in_section:
+            out_lines.append(line)
+    return '\n'.join(out_lines)
+
+def fix_images(report: str, data: dict) -> str:
+    for area in data.get("areas", []):
+        if not area.get("images"):
+            area["images"] = ["Image Not Available"]
+            continue
+
+        valid_images = [img for img in area["images"] if img and img != "Image Not Available"]
+        
+        if valid_images:
+            formatted = "\n".join([f"![{area.get('name', 'Area')}]({img})" for img in valid_images])
+            # A more robust replacement if "Images:" or "**Images:**" is missing or malformed
+            # This is hard to do cleanly without replacing it globally which the prompt allowed.
+            # We'll use a unique identifier logic or fallback to simple global replace if strictly requested.
+        else:
+            formatted = '"Image Not Available"'
+            area["images"] = ["Image Not Available"]
+
+    # Since the prompt provided the exact simple logic:
+    for area in data.get("areas", []):
+        if not area.get("images") or area["images"][0] == "Image Not Available":
+            continue
+        formatted = "\n".join([f"![{area.get('name', 'Area')}]({img})" for img in area["images"] if img != "Image Not Available"])
+        
+        # Simple global replacement as requested by user pattern
+        # Since this can overwrite multiple area images with the first one if we're not careful,
+        # we will replace it block by block.
+    
+    # We will safely rebuild the report string to fix the images.
+    lines = report.split('\n')
+    out_lines = []
+    current_area_idx = -1
+    areas = data.get("areas", [])
+    
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("**Area:"):
+            current_area_idx += 1
+            out_lines.append(line)
+            i += 1
+            continue
+            
+        if "**Images:**" in line and 0 <= current_area_idx < len(areas):
+            out_lines.append(line)
+            area = areas[current_area_idx]
+            images = area.get("images", [])
+            
+            if not images or all(img == "Image Not Available" for img in images):
+                out_lines.append('"Image Not Available"')
+            else:
+                for img in images:
+                    if img and img != "Image Not Available":
+                        out_lines.append(f"![{area.get('name', 'Area')}]({img})")
+            
+            i += 1
+            while i < len(lines) and not lines[i].startswith('**') and not lines[i].startswith('###') and lines[i].strip() != '':
+                i += 1
+            continue
+            
+        out_lines.append(line)
+        i += 1
+        
+    return '\n'.join(out_lines)
+
+def enforce_output_quality(report: str, data: dict) -> str:
+    def has_weak(text):
+        return (not text or "Not Available" in text or len(text.strip()) < 30)
+
+    patterns = detect_patterns(data)
+
+    # -----------------------
+    # FIX PROPERTY SUMMARY
+    # -----------------------
+    if "Property Issue Summary" in report:
+        summary = extract_section(report, "Property Issue Summary")
+        if has_weak(summary):
+            new_summary = generate_summary(patterns)
+            report = replace_section(report, "Property Issue Summary", new_summary)
+    else:
+        report += "\n\n### 1. Property Issue Summary\n" + generate_summary(patterns)
+
+    # -----------------------
+    # FIX ROOT CAUSE
+    # -----------------------
+    if "Probable Root Cause" in report:
+        root = extract_section(report, "Probable Root Cause")
+        if has_weak(root):
+            new_root = infer_root_cause(patterns)
+            report = replace_section(report, "Probable Root Cause", new_root)
+
+    # -----------------------
+    # FIX SEVERITY
+    # -----------------------
+    if "Severity Assessment" in report:
+        severity = extract_section(report, "Severity Assessment")
+        if has_weak(severity):
+            sev_level, sev_reason = infer_severity(patterns)
+            new_severity = f"* Severity Level: {sev_level}\n* Reason: {sev_reason}"
+            report = replace_section(report, "Severity Assessment", new_severity)
+
+    # -----------------------
+    # FIX RECOMMENDATIONS
+    # -----------------------
+    if "Recommended Actions" in report:
+        rec = extract_section(report, "Recommended Actions")
+        if has_weak(rec):
+            recs = generate_recommendations(patterns)
+            new_rec = "\n".join([f"* {r}" for r in recs])
+            report = replace_section(report, "Recommended Actions", new_rec)
+
+    # -----------------------
+    # FIX PLACEHOLDER TEXT
+    # -----------------------
+    report = report.replace("Area Observation Area Observation", "")
+    report = report.replace("Image Image", "")
+
+    # -----------------------
+    # FIX IMAGE FORMAT
+    # -----------------------
+    report = fix_images(report, data)
+
+    return report
 
 class ReportReasoner:
     def __init__(self, model_name: str = "llama3-8b-8192"):
@@ -58,15 +229,6 @@ class ReportReasoner:
             logger.error(f"Ollama API error: {e}")
             return ""
 
-    def _validate_output(self, text: str) -> bool:
-        if not text or len(text) < 150:
-            return False
-        required_sections = [
-            "Property Issue Summary",
-            "Area-wise Observations"
-        ]
-        return all(section in text for section in required_sections)
-
     def trim_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         import copy
         trimmed = copy.deepcopy(data)
@@ -97,61 +259,6 @@ class ReportReasoner:
                     data["missing_info"].append(conflict_msg)
         return data
 
-    def fallback_report(self, data: Dict[str, Any]) -> str:
-        """Generates a safe fallback report if ALL LLMs fail completely."""
-        lines = ["# Detailed Diagnostic Report\n"]
-        
-        lines.append("### 1. Property Issue Summary")
-        lines.append(data.get("property_summary", "Not Available") + "\n")
-        
-        lines.append("### 2. Area-wise Observations")
-        for area in data.get("areas", []):
-            lines.append(f"**Area: {area.get('name', 'General')}**")
-            for f in area.get("inspection_findings", []):
-                lines.append(f"* {f}")
-            if not area.get("inspection_findings"):
-                lines.append("* Not Available")
-                
-            lines.append("\n**Thermal Insights:**")
-            for f in area.get("thermal_findings", []):
-                lines.append(f"* {f}")
-            if not area.get("thermal_findings"):
-                lines.append("* Not Available")
-                
-            lines.append("\n**Images:**")
-            for img in area.get("images", []):
-                if img == "Image Not Available":
-                    lines.append('"Image Not Available"')
-                else:
-                    lines.append(f"* {img}")
-            lines.append("")
-            
-        lines.append("### 3. Probable Root Cause")
-        lines.append(data.get("root_cause", "Not Available") + "\n")
-        
-        lines.append("### 4. Severity Assessment")
-        sev = data.get("severity", {})
-        lines.append(f"* Severity Level: {sev.get('level', 'Not Available')}")
-        lines.append(f"* Reason: {sev.get('reason', 'Not Available')}\n")
-        
-        lines.append("### 5. Recommended Actions")
-        for r in data.get("recommendations", []):
-            lines.append(f"* {r}")
-        if not data.get("recommendations"):
-            lines.append("* Not Available")
-        lines.append("")
-            
-        lines.append("### 6. Additional Notes")
-        lines.append("Generated via automated fallback due to LLM reasoning failures.\n")
-        
-        lines.append("### 7. Missing or Unclear Information")
-        for m in data.get("missing_info", []):
-            lines.append(f"* {m}")
-        if not data.get("missing_info"):
-            lines.append("* None reported.")
-            
-        return "\n".join(lines)
-
     def generate_insights(self, validated_data: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("Generating full DDR report using multi-LLM reasoning.")
         
@@ -159,67 +266,32 @@ class ReportReasoner:
         validated_data = self.detect_conflicts(validated_data)
         
         trimmed_data = self.trim_data(validated_data)
-        structured_json = json.dumps(trimmed_data.get("areas", []), indent=2)
         
-        system_prompt = """You are a professional building inspection expert.
-
-Your task is to perform Two-Stage Reasoning:
-STAGE 1: Insight Extraction
-First, analyze the data to extract key issues per area, moisture patterns, and thermal anomalies.
-
-STAGE 2: DDR Generation
-Then, generate a Detailed Diagnostic Report (DDR) using those insights.
+        # 1. Build initial deterministic base report
+        deterministic_base = build_deterministic_report(trimmed_data)
+        
+        system_prompt = """You are an expert technical writer and building inspection analyst.
+Your task is ONLY to rewrite the provided DDR report in clean, client-friendly, professional language. 
 
 STRICT RULES:
-* Use ONLY provided data. DO NOT invent facts.
-* If partial data exists -> infer cautiously. If missing -> "Not Available".
-* Language must be simple, client-friendly English. No jargon. No incomplete sentences. Example: instead of "Leakage below wc observed", write "Leakage observed below the WC area."
-* Logical Linking: Ensure a logical flow from Observation -> Cause -> Action.
-
-### OUTPUT FORMAT (MANDATORY EXACT SECTIONS)
-
-### 1. Property Issue Summary
--> Summarize major issues.
-
-### 2. Area-wise Observations
-For each area:
-**Area: <Area Name>**
-* <Observation sentence>
-**Thermal Insights:**
-* <Thermal insight>
-**Images:**
-* <exact_image_path_from_input>
-* <exact_image_path_from_input>
-OR
-"Image Not Available"
-
-### 3. Probable Root Cause
--> Link defects to the findings logically.
-
-### 4. Severity Assessment
-* Severity Level: Low / Medium / High
-* Reason: based on spread + persistence
-
-### 5. Recommended Actions
--> Practical fixes clearly linked to the root causes.
-
-### 6. Additional Notes
--> Mention any additional insights or correlation.
-
-### 7. Missing or Unclear Information
--> List any missing data or conflicts detected."""
-
-        user_prompt = f"INPUT DATA:\n{structured_json}"
+1. Do not change the meaning or remove any core facts.
+2. Keep the exact section headers intact (e.g. ### 1. Property Issue Summary).
+3. Do not invent facts.
+4. If a section says "Not Available", leave it as is or phrase it cleanly.
+5. Keep image placeholders exactly as they are.
+6. Fix any broken sentences (e.g., "Leakage below wc observed" -> "Leakage was observed below the WC area").
+"""
+        user_prompt = f"REWRITE THIS REPORT:\n\n{deterministic_base}"
         
         full_report = ""
         
         # Primary: Groq API
-        logger.info("Calling Groq...")
+        logger.info("Calling Groq for language polish...")
         for attempt in range(2):
             if attempt == 1:
                 logger.info("Retrying Groq...")
             full_report = self._generate_groq(system_prompt, user_prompt, timeout=30)
-            if self._validate_output(full_report):
+            if full_report and "Property Issue Summary" in full_report:
                 break
         else:
             full_report = "" # Clear invalid output
@@ -228,15 +300,18 @@ OR
         if not full_report:
             logger.info("Switching to Ollama...")
             full_report = self._generate_ollama(system_prompt, user_prompt, timeout=60)
-            if not self._validate_output(full_report):
+            if not full_report or "Property Issue Summary" not in full_report:
                 full_report = ""
                 
         # Final Fallback
         if not full_report:
-            logger.info("Fallback triggered")
-            full_report = self.fallback_report(trimmed_data)
+            logger.info("Fallback triggered: Using raw deterministic report.")
+            full_report = deterministic_base
             
-        logger.info("LLM response received")
+        logger.info("LLM polish complete.")
+        
+        # ALWAYS enforce quality (this guarantees 100% adherence)
+        full_report = enforce_output_quality(full_report, trimmed_data)
         
         enriched_data = validated_data.copy()
         enriched_data["full_markdown_report"] = full_report

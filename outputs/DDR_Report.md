@@ -1,81 +1,118 @@
 # Detailed Diagnostic Report
 
 ### 1. Property Issue Summary
-Not Available.
+The property shows multiple issues including dampness, leakage, structural cracks, observed across different areas, indicating ongoing moisture and structural concerns.
 
 ### 2. Area-wise Observations
-**Area: Bathroom**
+Area: Bathroom
+
 * Tile hollowness observed in the master bathroom.
-* Leakage below WC observed.
-* Leakage due to damage in Nahani trap/Brickbat coba under observed.
+* Leakage below wc observed.
+* Leakage due to damage in nahani trap/brickbat coba under observed.
+* Gaps around nahani trap joints observed.
+* Internal wc/bath/balcony leakage observed.
 
-**Thermal Insights:**
-* Not Available
+Thermal Insights:
 
-**Images:**
-![Area Observation](images\insp_p1_img0.png)
-![Area Observation](images\insp_p3_img3.jpeg)
+* Thermal data not available for this area.
 
-**Area: Balcony**
-* Internal WC/Bath/Balcony leakage observed.
+Images:
+![Bathroom](images\insp_p1_img0.png)
+![Bathroom](images\insp_p3_img3.jpeg)
 
-**Thermal Insights:**
-* Not Available
+Area: Balcony
 
-**Images:**
-![Area Observation](images\insp_p2_img0.png)
-![Area Observation](images\insp_p3_img4.jpeg)
+* Internal wc/bath/balcony leakage observed.
 
-**Area: Terrace**
+Thermal Insights:
+
+* Thermal data not available for this area.
+
+Images:
+![Balcony](images\insp_p2_img0.png)
+![Balcony](images\insp_p3_img4.jpeg)
+
+Area: Terrace
+
 * Leakage observed from overhead water tank.
 
-**Thermal Insights:**
-* Not Available
+Thermal Insights:
 
-**Images:**
-![Area Observation](images\insp_p3_img0.png)
-![Area Observation](images\insp_p3_img5.jpeg)
+* Thermal data not available for this area.
 
-**Area: External Wall**
-* Hall Skirting level Dampness observed.
-* External wall crack and Duct observed.
+Images:
+![Terrace](images\insp_p3_img0.png)
+![Terrace](images\insp_p3_img5.jpeg)
+
+Area: External Wall
+
+* Hall skirting level dampness observed.
+* External wall crack and duct observed.
 * Leakage at adjacent walls observed.
+* Observed dampness at the skirting level.
+* Observed cracks on the external wall of building.
 
-**Thermal Insights:**
-* Not Available
+Thermal Insights:
 
-**Images:**
-![Area Observation](images\insp_p3_img1.jpeg)
-![Area Observation](images\insp_p3_img6.jpeg)
+* Thermal data not available for this area.
 
-**Area: General**
+Images:
+![External Wall](images\insp_p3_img1.jpeg)
+![External Wall](images\insp_p3_img6.jpeg)
+
+Area: General
+
 * Hollowness observed.
-* Parking Area seepage.
+* Parking area seepage.
 * Hollowness and plumbing issue.
+* Outlet leakage observed.
+* Leakage during: observed.
+* Leakage due to concealed plumbing observed.
+* Gaps/blackish dirt observed in tile joints.
+* Loose plumbing joints/rust around joints and edges (flush observed.
+* Leakage at interior side observed.
+* Cracks observed on rcc column and beam.
+* Corrosion/spalling of concrete/exposed observed.
+* Re any major or minor cracks observed over external.
+* External plumbing pipes cracked and leaked?.
+* Any vegetation growth, dish antennas fixed on.
+* Corrosion on metal rods and ms window grills observed.
+* Separation cracks observed at beam-column.
+* Observed gaps between the tile joints of.
+* Observed gaps between the tile joints of master.
+* Observed dampness & efflorescence on.
+* Observed leakage at the parking ceiling.
+* Observed plumbing issue & gaps between the.
+* Observed mild dampness at the ceiling of.
+* Observed gap between tile joints of common &.
 
-**Thermal Insights:**
-* Not Available
+Thermal Insights:
 
-**Images:**
-![Area Observation](images\insp_p3_img2.jpeg)
-![Area Observation](images\insp_p3_img7.jpeg)
+* Thermal data not available for this area.
+
+Images:
+![General](images\insp_p3_img2.jpeg)
+![General](images\insp_p3_img7.jpeg)
 
 ### 3. Probable Root Cause
-Not Available.
+The issues are likely caused by concealed plumbing leakage, waterproofing failure, external wall damage allowing water ingress.
 
 ### 4. Severity Assessment
-* Severity Level: Not Available.
-* Reason: Not Available.
+* **Severity Level**: High
+* **Reason**: Multiple areas are affected, indicating significant structural concern.
 
 ### 5. Recommended Actions
-* Not Available.
+* Inspect and repair plumbing systems
+* Apply waterproofing treatment in affected areas
+* Seal tile joints and drainage points
+* Repair cracks and repaint with waterproof coating
 
 ### 6. Additional Notes
-Generated via automated fallback due to LLM reasoning failures.
+Generated via deterministic rule-engine correlation.
 
 ### 7. Missing or Unclear Information
-* Conflict: Inspection indicates issues in Bathroom but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
-* Conflict: Inspection indicates issues in Balcony but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
-* Conflict: Inspection indicates issues in Terrace but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
-* Conflict: Inspection indicates issues in External Wall but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
-* Conflict: Inspection indicates issues in General but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in Bathroom but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in Balcony but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in Terrace but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in External Wall but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in General but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
