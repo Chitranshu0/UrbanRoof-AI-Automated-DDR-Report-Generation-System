@@ -1,0 +1,7 @@
+PyMuPDF==1.23.21
+pydantic==2.6.3
+langgraph==0.0.26
+langchain-core==0.1.30
+groq==0.4.2
+streamlit==1.31.1
+python-dotenv==1.0.1
