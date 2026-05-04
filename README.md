@@ -248,8 +248,8 @@ The generated report includes:
 
 ## 🎥 Submission Links
 
-* 🔗 GitHub Repo: *(Add here)*
-* 🌐 Live Demo: *(If deployed)*
+* 🔗 GitHub Repo: *https://github.com/Chitranshu0/UrbanRoof-AI-Automated-DDR-Report-Generation-System*
+* 🌐 Live Demo: *https://urbanroof-ai-automated-ddr-report-generation-system.streamlit.app/*
 
 ---
 
