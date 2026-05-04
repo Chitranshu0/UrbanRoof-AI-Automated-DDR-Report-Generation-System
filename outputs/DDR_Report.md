@@ -7,8 +7,13 @@ The property shows multiple issues including dampness, leakage, structural crack
 Area: Bathroom
 
 * Tile hollowness observed in the master bathroom.
+* Leakage below wc observed.
+* Leakage due to damage in nahani trap/brickbat coba under observed.
+* Gaps around nahani trap joints observed.
+* Internal wc/bath/balcony leakage observed.
 
 Thermal Insights:
+
 * Thermal data not available for this area.
 
 Images:
@@ -17,9 +22,10 @@ Images:
 
 Area: Balcony
 
-* No visible findings reported.
+* Internal wc/bath/balcony leakage observed.
 
 Thermal Insights:
+
 * Thermal data not available for this area.
 
 Images:
@@ -31,6 +37,7 @@ Area: Terrace
 * Leakage observed from overhead water tank.
 
 Thermal Insights:
+
 * Thermal data not available for this area.
 
 Images:
@@ -39,10 +46,14 @@ Images:
 
 Area: External Wall
 
+* Hall skirting level dampness observed.
+* External wall crack and duct observed.
+* Leakage at adjacent walls observed.
 * Observed dampness at the skirting level.
-* Observed cracks on the External wall of building.
+* Observed cracks on the external wall of building.
 
 Thermal Insights:
+
 * Thermal data not available for this area.
 
 Images:
@@ -51,16 +62,32 @@ Images:
 
 Area: General
 
-* Parking Area seepage.
+* Hollowness observed.
+* Parking area seepage.
 * Hollowness and plumbing issue.
-* Gaps/Blackish dirt Observed in tile joints.
-* Cracks observed on RCC Column and Beam.
+* Outlet leakage observed.
+* Leakage during: observed.
+* Leakage due to concealed plumbing observed.
+* Gaps/blackish dirt observed in tile joints.
+* Loose plumbing joints/rust around joints and edges (flush observed.
+* Leakage at interior side observed.
+* Cracks observed on rcc column and beam.
+* Corrosion/spalling of concrete/exposed observed.
+* Re any major or minor cracks observed over external.
 * External plumbing pipes cracked and leaked?.
 * Any vegetation growth, dish antennas fixed on.
+* Corrosion on metal rods and ms window grills observed.
 * Separation cracks observed at beam-column.
 * Observed gaps between the tile joints of.
+* Observed gaps between the tile joints of master.
+* Observed dampness & efflorescence on.
+* Observed leakage at the parking ceiling.
+* Observed plumbing issue & gaps between the.
+* Observed mild dampness at the ceiling of.
+* Observed gap between tile joints of common &.
 
 Thermal Insights:
+
 * Thermal data not available for this area.
 
 Images:
@@ -71,8 +98,8 @@ Images:
 The issues are likely caused by concealed plumbing leakage, waterproofing failure, external wall damage allowing water ingress.
 
 ### 4. Severity Assessment
-* Severity Level: High
-* Reason: Multiple areas are affected, indicating significant structural concern.
+* **Severity Level**: High
+* **Reason**: Multiple areas are affected, indicating significant structural concern.
 
 ### 5. Recommended Actions
 * Inspect and repair plumbing systems
@@ -84,4 +111,8 @@ The issues are likely caused by concealed plumbing leakage, waterproofing failur
 Generated via deterministic rule-engine correlation.
 
 ### 7. Missing or Unclear Information
-* Thermal data does not consistently confirm leakage across multiple areas, suggesting intermittent or concealed moisture sources.
+Conflict: Inspection indicates issues in Bathroom but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in Balcony but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in Terrace but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in External Wall but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
+Conflict: Inspection indicates issues in General but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage.
