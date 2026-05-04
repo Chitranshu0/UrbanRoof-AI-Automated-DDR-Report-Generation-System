@@ -35,7 +35,7 @@ show_json = st.sidebar.checkbox("Show Extracted JSON")
 
 # ---------------- Sample Paths ----------------
 sample_insp = os.path.join("data", "Sample Report.pdf")
-sample_therm = os.path.join("data", "Thermal Images.pdf")
+sample_therm = sample_insp  # Use the same sample PDF for both inspection and thermal as they are the same input
 
 insp_path = None
 therm_path = None
