@@ -62,6 +62,12 @@ migrate_legacy_sample_files()
 st.title("🏠 UrbanRoof AI: Automated DDR Report Generation System")
 st.markdown("Generate a **Detailed Diagnostic Report (DDR)** from Inspection & Thermal PDFs")
 
+# -------------------- Sidebar (Options First) --------------------
+st.sidebar.header("⚙️ Options")
+use_sample = st.sidebar.checkbox("Use Sample Data")
+show_sample = st.sidebar.checkbox("Preview Sample PDFs")
+show_json = st.sidebar.checkbox("Show Extracted JSON")
+
 # -------------------- File Input (HIGH PRIORITY) --------------------
 st.markdown("---")
 st.subheader("📄 Input")
@@ -91,14 +97,47 @@ if inspection_file and thermal_file:
 
 st.markdown("---")
 
-st.info(
-    """
-🎯 **AI Generalist Assignment Submission**
+# -------------------- Sample Validation --------------------
+insp_ok, insp_msg = check_file(sample_insp, "Inspection sample file")
+therm_ok, therm_msg = check_file(sample_therm, "Thermal sample file")
 
-This system demonstrates a real-world AI workflow that converts unstructured inspection and thermal reports into structured DDR reports.
-"""
-)
+if use_sample and (not insp_ok or not therm_ok):
+    st.error("Sample files missing.")
+    if insp_msg:
+        st.text(insp_msg)
+    if therm_msg:
+        st.text(therm_msg)
+    st.stop()
 
+# -------------------- Sample Overrides --------------------
+if use_sample:
+    insp_path = sample_insp
+    therm_path = sample_therm
+    st.info("✅ Using preloaded sample data")
+
+# -------------------- Preview PDFs (NOW AT TOP) --------------------
+if use_sample and show_sample:
+    st.subheader("📂 Sample Data Preview")
+    colA, colB = st.columns(2)
+    if insp_ok:
+        with colA:
+            st.markdown("**Inspection Report**")
+            with open(sample_insp, "rb") as f:
+                st.download_button("📥 Download Inspection Sample", f.read(), file_name="sample_inspection.pdf")
+    else:
+        colA.warning("Inspection sample unavailable.")
+
+    if therm_ok:
+        with colB:
+            st.markdown("**Thermal Report**")
+            with open(sample_therm, "rb") as f:
+                st.download_button("📥 Download Thermal Sample", f.read(), file_name="sample_thermal.pdf")
+    else:
+        colB.warning("Thermal sample unavailable.")
+    
+    st.markdown("---")
+
+# -------------------- System Context & Expanders --------------------
 with st.expander("🧠 How the System Works"):
     st.markdown(
         """
@@ -159,54 +198,20 @@ with st.expander("📊 Limitations"):
 """
     )
 
-# -------------------- Sidebar --------------------
-st.sidebar.header("⚙️ Options")
-use_sample = st.sidebar.checkbox("Use Sample Data")
-show_sample = st.sidebar.checkbox("Preview Sample PDFs")
-show_json = st.sidebar.checkbox("Show Extracted JSON")
-
-# -------------------- Sample Validation --------------------
-insp_ok, insp_msg = check_file(sample_insp, "Inspection sample file")
-therm_ok, therm_msg = check_file(sample_therm, "Thermal sample file")
-
-if use_sample and (not insp_ok or not therm_ok):
-    st.error("Sample files missing.")
-    if insp_msg:
-        st.text(insp_msg)
-    if therm_msg:
-        st.text(therm_msg)
-    st.stop()
-
-# -------------------- Sample Overrides --------------------
-if use_sample:
-    insp_path = sample_insp
-    therm_path = sample_therm
-    st.info("✅ Using preloaded sample data")
+st.markdown("---")
 
 
-# -------------------- Preview PDFs --------------------
-insp_ok, insp_msg = check_file(sample_insp, "Inspection sample file")
-therm_ok, therm_msg = check_file(sample_therm, "Thermal sample file")
 
-if use_sample and show_sample:
-    st.subheader("📂 Sample Data Preview")
-    colA, colB = st.columns(2)
-    if insp_ok:
-        with colA:
-            st.markdown("**Inspection Report**")
-            with open(sample_insp, "rb") as f:
-                st.download_button("Download Inspection Sample", f.read(), file_name="sample_inspection.pdf")
-    else:
-        colA.warning("Inspection sample unavailable.")
+st.markdown("---")
 
-    if therm_ok:
-        with colB:
-            st.markdown("**Thermal Report**")
-            with open(sample_therm, "rb") as f:
-                st.download_button("Download Thermal Sample", f.read(), file_name="sample_thermal.pdf")
-    else:
-        colB.warning("Thermal sample unavailable.")
+# -------------------- Assignment Context (AT END) --------------------
+st.info(
+    """
+🎯 **AI Generalist Assignment Submission**
 
+This system demonstrates a real-world AI workflow that converts unstructured inspection and thermal reports into structured DDR reports.
+"""
+)
 
 # -------------------- Generate ----------------
 if st.button("🚀 Generate DDR Report"):
@@ -260,3 +265,4 @@ if st.button("🚀 Generate DDR Report"):
                         st.json(json_data)
             except Exception as e:
                 st.error(f"Pipeline execution failed: {e}")
+
