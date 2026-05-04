@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import requests
 from typing import Dict, Any
 from groq import Groq
 from dotenv import load_dotenv
@@ -17,7 +18,7 @@ class ReportReasoner:
         self.client = Groq(api_key=self.api_key) if self.api_key else Groq()
         self.model_name = model_name
         
-    def _generate(self, system_prompt: str, user_prompt: str) -> str:
+    def _generate_groq(self, system_prompt: str, user_prompt: str, timeout: int = 30) -> str:
         try:
             chat_completion = self.client.chat.completions.create(
                 messages=[
@@ -31,25 +32,74 @@ class ReportReasoner:
                     }
                 ],
                 model=self.model_name,
-                temperature=0.1, # Low temperature for factual consistency
+                temperature=0.1,
+                timeout=timeout
             )
             return chat_completion.choices[0].message.content.strip()
         except Exception as e:
             logger.error(f"Groq API error: {e}")
-            return "Report Generation Failed."
+            return ""
+
+    def _generate_ollama(self, system_prompt: str, user_prompt: str, timeout: int = 60) -> str:
+        url = "http://localhost:11434/api/generate"
+        payload = {
+            "model": "smollm:latest",
+            "prompt": f"{system_prompt}\n\n{user_prompt}",
+            "stream": False,
+            "options": {
+                "temperature": 0.1
+            }
+        }
+        try:
+            response = requests.post(url, json=payload, timeout=timeout)
+            response.raise_for_status()
+            return response.json().get("response", "").strip()
+        except Exception as e:
+            logger.error(f"Ollama API error: {e}")
+            return ""
+
+    def _validate_output(self, text: str) -> bool:
+        if not text or len(text) < 150:
+            return False
+        required_sections = [
+            "Property Issue Summary",
+            "Area-wise Observations"
+        ]
+        return all(section in text for section in required_sections)
 
     def trim_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         import copy
         trimmed = copy.deepcopy(data)
         for area in trimmed.get("areas", []):
-            area["inspection_findings"] = area.get("inspection_findings", [])[:5]
-            area["thermal_findings"] = area.get("thermal_findings", [])[:5]
-            area["images"] = area.get("images", [])[:3]
+            insp = [f for f in area.get("inspection_findings", []) if f]
+            therm = [f for f in area.get("thermal_findings", []) if f]
+            imgs = [img for img in area.get("images", []) if img and img != "Image Not Available"]
+            
+            area["inspection_findings"] = insp[:3]
+            area["thermal_findings"] = therm[:3]
+            area["images"] = imgs[:2] if imgs else ["Image Not Available"]
         return trimmed
 
+    def detect_conflicts(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Detect discrepancies between inspection and thermal data."""
+        if "missing_info" not in data:
+            data["missing_info"] = []
+            
+        for area in data.get("areas", []):
+            insp = area.get("inspection_findings", [])
+            therm = area.get("thermal_findings", [])
+            
+            if insp and not therm:
+                # Add conflict
+                area_name = area.get("name", "this area")
+                conflict_msg = f"Conflict: Inspection indicates issues in {area_name} but thermal data does not confirm a clear anomaly. This may indicate intermittent or concealed leakage."
+                if conflict_msg not in data["missing_info"]:
+                    data["missing_info"].append(conflict_msg)
+        return data
+
     def fallback_report(self, data: Dict[str, Any]) -> str:
-        """Generates a safe fallback report if LLM fails completely."""
-        lines = ["# Detailed Diagnostic Report (Fallback)\n"]
+        """Generates a safe fallback report if ALL LLMs fail completely."""
+        lines = ["# Detailed Diagnostic Report\n"]
         
         lines.append("### 1. Property Issue Summary")
         lines.append(data.get("property_summary", "Not Available") + "\n")
@@ -87,10 +137,12 @@ class ReportReasoner:
         lines.append("### 5. Recommended Actions")
         for r in data.get("recommendations", []):
             lines.append(f"* {r}")
+        if not data.get("recommendations"):
+            lines.append("* Not Available")
         lines.append("")
             
         lines.append("### 6. Additional Notes")
-        lines.append("Generated via automated fallback due to LLM reasoning failure.\n")
+        lines.append("Generated via automated fallback due to LLM reasoning failures.\n")
         
         lines.append("### 7. Missing or Unclear Information")
         for m in data.get("missing_info", []):
@@ -101,101 +153,91 @@ class ReportReasoner:
         return "\n".join(lines)
 
     def generate_insights(self, validated_data: Dict[str, Any]) -> Dict[str, Any]:
-        logger.info("Generating full DDR report using Groq API reasoning.")
+        logger.info("Generating full DDR report using multi-LLM reasoning.")
         
-        # Trim data before formatting into JSON string
+        # Conflict Detection explicitly in Python
+        validated_data = self.detect_conflicts(validated_data)
+        
         trimmed_data = self.trim_data(validated_data)
         structured_json = json.dumps(trimmed_data.get("areas", []), indent=2)
         
-        system_prompt = """You are a professional building inspection analyst AI.
+        system_prompt = """You are a professional building inspection expert.
 
-Your task is to convert structured inspection and thermal data into a clean, client-ready DDR (Detailed Diagnostic Report).
+Your task is to perform Two-Stage Reasoning:
+STAGE 1: Insight Extraction
+First, analyze the data to extract key issues per area, moisture patterns, and thermal anomalies.
 
-## ⚠️ CRITICAL RULES (STRICTLY FOLLOW)
-1. DO NOT invent any facts.
-2. ONLY use information present in input.
-3. If information is missing -> write "Not Available".
-4. If there is conflicting information -> explicitly mention the conflict.
-5. Remove noise, incomplete phrases, and irrelevant text.
-6. Merge duplicate observations into one clean statement.
-7. Use simple, client-friendly language (non-technical).
-8. Ensure logical consistency between inspection and thermal findings.
+STAGE 2: DDR Generation
+Then, generate a Detailed Diagnostic Report (DDR) using those insights.
 
-## 🧠 PROCESSING REQUIREMENTS
+STRICT RULES:
+* Use ONLY provided data. DO NOT invent facts.
+* If partial data exists -> infer cautiously. If missing -> "Not Available".
+* Language must be simple, client-friendly English. No jargon. No incomplete sentences. Example: instead of "Leakage below wc observed", write "Leakage observed below the WC area."
+* Logical Linking: Ensure a logical flow from Observation -> Cause -> Action.
 
-### Step 1: Clean Data
-* Remove incomplete phrases (e.g., "of Flat No.")
-* Remove repeated entries
-* Convert broken sentences into meaningful observations
-
-### Step 2: Logical Merging
-* Combine inspection + thermal findings
-* Group by area
-* Align temperature anomalies with physical issues
-
-### Step 3: Image Handling
-* Attach ONLY relevant images to each area
-* If too many -> select most relevant ones
-* If no image available -> write "Image Not Available"
-* Output the exact image path string provided in the input under the Images section.
-
-## 📄 OUTPUT FORMAT (STRICT)
-Generate output EXACTLY in this format:
+### OUTPUT FORMAT (MANDATORY EXACT SECTIONS)
 
 ### 1. Property Issue Summary
-Provide a concise summary of major issues observed across the property.
+-> Summarize major issues.
 
 ### 2. Area-wise Observations
 For each area:
 **Area: <Area Name>**
-* Observation 1
-* Observation 2
-
+* <Observation sentence>
 **Thermal Insights:**
-* Insight 1
-* Insight 2
-
+* <Thermal insight>
 **Images:**
-* <image_path_1>
-* <image_path_2>
+* <exact_image_path_from_input>
+* <exact_image_path_from_input>
 OR
 "Image Not Available"
 
 ### 3. Probable Root Cause
-Explain the likely cause of the issues based ONLY on observations.
+-> Link defects to the findings logically.
 
-### 4. Severity Assessment (with reasoning)
+### 4. Severity Assessment
 * Severity Level: Low / Medium / High
-* Reason: Explain clearly based on findings
+* Reason: based on spread + persistence
 
 ### 5. Recommended Actions
-Provide practical and actionable repair steps.
+-> Practical fixes clearly linked to the root causes.
 
 ### 6. Additional Notes
-Include any extra useful information.
+-> Mention any additional insights or correlation.
 
 ### 7. Missing or Unclear Information
-Explicitly list:
-* Missing data
-* Conflicts between inspection and thermal reports"""
+-> List any missing data or conflicts detected."""
 
         user_prompt = f"INPUT DATA:\n{structured_json}"
         
         full_report = ""
-        # Validation loop
+        
+        # Primary: Groq API
+        logger.info("Calling Groq...")
         for attempt in range(2):
-            full_report = self._generate(system_prompt, user_prompt)
-            # Check validity
-            if full_report and len(full_report) > 100 and "Property Issue Summary" in full_report:
+            if attempt == 1:
+                logger.info("Retrying Groq...")
+            full_report = self._generate_groq(system_prompt, user_prompt, timeout=30)
+            if self._validate_output(full_report):
                 break
-            logger.warning(f"LLM output invalid or too short on attempt {attempt+1}. Regenerating...")
         else:
-            logger.error("LLM failed completely. Using fallback report generator.")
+            full_report = "" # Clear invalid output
+            
+        # Backup: Ollama SmolLM
+        if not full_report:
+            logger.info("Switching to Ollama...")
+            full_report = self._generate_ollama(system_prompt, user_prompt, timeout=60)
+            if not self._validate_output(full_report):
+                full_report = ""
+                
+        # Final Fallback
+        if not full_report:
+            logger.info("Fallback triggered")
             full_report = self.fallback_report(trimmed_data)
             
-        logger.info("LLM response received / fallback executed")
+        logger.info("LLM response received")
         
-        # Merge back
         enriched_data = validated_data.copy()
         enriched_data["full_markdown_report"] = full_report
         

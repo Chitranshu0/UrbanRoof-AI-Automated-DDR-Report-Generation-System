@@ -1,4 +1,3 @@
-# src/structurer.py
 import re
 import logging
 from typing import Dict, Any, List
@@ -8,24 +7,22 @@ logger = logging.getLogger(__name__)
 class TextStructurer:
     """
     Converts raw extracted data into a structured DDR-ready JSON.
-    Filters noise, checks relevance, and categorizes by area.
+    Filters noise, checks relevance, cleans sentences, and categorizes by area.
     """
 
     AREA_SYNONYMS = {
-        "Bathroom": ["bathroom", "washroom", "toilet", "bath"],
-        "Balcony": ["balcony", "deck"],
-        "Terrace": ["terrace", "roof", "top"],
-        "External Wall": ["external wall", "outer wall", "facade", "wall"],
+        "Bathroom": ["bathroom", "washroom", "toilet", "bath", "wc", "nahani", "mb bathroom"],
+        "Balcony": ["balcony", "deck", "patio"],
+        "Terrace": ["terrace", "roof", "top", "overhead"],
+        "External Wall": ["external wall", "outer wall", "facade", "wall", "skirting"],
+        "Kitchen": ["kitchen", "sink", "utility"],
+        "Bedroom": ["bedroom", "master bedroom", "guest bedroom"]
     }
     
     RELEVANT_KEYWORDS = [
         "dampness", "crack", "leakage", "seepage", "efflorescence", 
-        "spalling", "vegetation", "gap", "gaps", "hollowness", "water ingress"
-    ]
-    
-    NOISE_KEYWORDS = [
-        "section", "page", "table of content", "input 1", 
-        "yes", "no", "not sure"
+        "spalling", "vegetation", "gap", "gaps", "hollowness", "water ingress",
+        "plumbing", "corrosion", "damage", "wear and tear", "issue"
     ]
 
     def structure(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -49,8 +46,10 @@ class TextStructurer:
             therm_findings = self._match_sentences(thermal_sentences, keywords)
 
             if insp_findings or therm_findings:
+                confidence = "High" if (len(insp_findings) + len(therm_findings)) >= 2 else "Medium"
                 areas_dict[area] = {
                     "name": area,
+                    "confidence": confidence,
                     "inspection_findings": insp_findings,
                     "thermal_findings": therm_findings,
                     "images": []
@@ -66,6 +65,7 @@ class TextStructurer:
         if general_insp or general_therm or not areas_dict:
             areas_dict["General"] = {
                 "name": "General",
+                "confidence": "Low",
                 "inspection_findings": general_insp,
                 "thermal_findings": general_therm,
                 "images": []
@@ -73,19 +73,17 @@ class TextStructurer:
 
         areas_list = list(areas_dict.values())
 
-        # Improved image distribution (round-robin) up to 3 per area
+        # Distribute images cleanly (max 2 per area)
         if areas_list and images:
             for i, img in enumerate(images):
                 area_index = i % len(areas_list)
-                if len(areas_list[area_index]["images"]) < 3:
+                if len(areas_list[area_index]["images"]) < 2:
                     areas_list[area_index]["images"].append(img["path"])
 
-        # Mark "Image Not Available" for areas with no images
         for area in areas_list:
             if not area["images"]:
                 area["images"] = ["Image Not Available"]
 
-        # Build final expected structure
         structured_output = {
             "property_summary": "Not Available",
             "areas": areas_list,
@@ -98,35 +96,59 @@ class TextStructurer:
             "missing_info": []
         }
 
-        logger.info("structuring complete")
+        logger.info("Structuring complete")
         return structured_output
 
     def _clean_and_filter(self, text: str) -> List[str]:
         if not text:
             return []
             
-        # Split sentences
         raw_sentences = re.split(r'(?<=[.!?])\s+|\n+', text)
         cleaned = []
         
         for s in raw_sentences:
             s = s.strip()
-            # Basic noise filtering
-            if len(s) < 20: continue
+            if not s: continue
             
             s_lower = s.lower()
-            if any(noise in s_lower for noise in self.NOISE_KEYWORDS): continue
             
-            # Relevance filtering
+            # Exact noise matching
+            if s_lower in ["yes", "no", "not sure", "y", "n", "n/a", "na", "-"]: continue
+            if re.match(r'^input\s*1\.\d+', s_lower): continue
+            if "page" in s_lower and len(s) < 15: continue
+            if "section" in s_lower and len(s) < 15: continue
+            if "table of content" in s_lower: continue
+            if re.match(r'^(table\s+\d+|header|footer|index)\b', s_lower): continue
+            
+            # Must contain at least one relevant keyword
             if not any(kw in s_lower for kw in self.RELEVANT_KEYWORDS): continue
             
-            # Fix broken sentences/spaces (e.g. "of Flat No.")
+            # Sentence cleaning - remove leading noisy words
+            s = re.sub(r'^(Condition of|Are the|Observed on|Condition:|Observation:|Note:)\s*', '', s, flags=re.IGNORECASE)
             s = re.sub(r'\s+', ' ', s)
-            if "of flat no" in s_lower and len(s) < 30: continue
+            s = s.strip()
+            
+            if len(s) < 10: continue
+            
+            s = s[0].upper() + s[1:]
+            
+            # Transform fragments into proper sentences
+            if re.match(r'^mb\s+bathroom', s, re.IGNORECASE):
+                s = re.sub(r'^mb\s+bathroom\s+', '', s, flags=re.IGNORECASE)
+                if s:
+                    s = s[0].upper() + s[1:]
+                    if not s.endswith('.') and not s.endswith('?'):
+                        s += " observed in the master bathroom."
+            
+            if not s.endswith('.') and not s.endswith('?'):
+                # Basic grammatical append if it looks like a fragment
+                if not any(verb in s_lower for verb in ["is", "are", "shows", "observed", "detected", "found", "compromised", "leaked", "cracked", "indicates"]):
+                    s += " observed."
+                else:
+                    s += "."
             
             cleaned.append(s)
             
-        # Remove duplicates while preserving order
         return list(dict.fromkeys(cleaned))
 
     def _match_sentences(self, sentences: List[str], keywords: List[str]) -> List[str]:

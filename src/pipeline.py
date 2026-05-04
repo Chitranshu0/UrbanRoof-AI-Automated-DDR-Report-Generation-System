@@ -50,7 +50,8 @@ class DDRPipeline:
 
         def structure_node(state: PipelineState):
             structured = self.structurer.structure(state["raw_data"])
-            logger.info("structuring complete")
+            logger.info("Structuring complete")
+            logger.info("Clean data ready")
             return {"structured_data": structured}
 
         def validate_node(state: PipelineState):
