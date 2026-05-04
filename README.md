@@ -1,7 +1,17 @@
-# 🏠 UrbanRoof AI – DDR Report Generation System
-
+# 🏠 UrbanRoof AI – DDR Report Generation System  
 ### (AI Generalist | Applied AI Builder Assignment Submission)
 
+---
+
+## 🌐 Live Application Preview
+
+👉 https://urbanroof-ai-automated-ddr-report-generation-system.streamlit.app/
+
+[![Open App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://urbanroof-ai-automated-ddr-report-generation-system.streamlit.app/)
+
+---
+
+> 🚀 Live AI system that converts raw inspection reports into structured DDR outputs in real-time.
 ---
 
 ## 👨‍💻 Candidate Details
