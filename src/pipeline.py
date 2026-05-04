@@ -2,8 +2,12 @@ import argparse
 import logging
 import json
 import os
+import sys
 from typing import TypedDict, Dict, Any
 from langgraph.graph import StateGraph, END
+
+# Ensure src module is in path so absolute imports work regardless of entry point
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from extractor import PDFExtractor
 from structurer import TextStructurer
