@@ -98,8 +98,8 @@ Images:
 The issues are likely caused by concealed plumbing leakage, waterproofing failure, external wall damage allowing water ingress.
 
 ### 4. Severity Assessment
-* **Severity Level**: High
-* **Reason**: Multiple areas are affected, indicating significant structural concern.
+* Severity Level: High
+* Reason: Multiple areas are affected, indicating significant structural concern.
 
 ### 5. Recommended Actions
 * Inspect and repair plumbing systems
