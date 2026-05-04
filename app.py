@@ -149,6 +149,16 @@ with st.expander("🧠 How the System Works"):
 6. Generate DDR report  
 """
     )
+    st.markdown(
+        """
+1. Extract text & images from PDFs  
+2. Structure data into area-wise observations  
+3. Validate using Pydantic  
+4. Apply rule-based reasoning  
+5. Use LLM for refinement  
+6. Generate DDR report  
+"""
+    )
 
 with st.expander("🎯 Assignment Coverage"):
     st.markdown(
