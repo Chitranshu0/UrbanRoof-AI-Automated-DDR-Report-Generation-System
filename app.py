@@ -70,19 +70,22 @@ with col1:
 if use_sample and show_sample:
     st.subheader("📂 Sample Data Preview")
 
-    colA, colB = st.columns(2)
+    if os.path.exists(sample_insp) and os.path.exists(sample_therm):
+        colA, colB = st.columns(2)
 
-    with colA:
-        st.markdown("**Inspection Report**")
-        with open(sample_insp, "rb") as f:
-            sample_insp_bytes = f.read()
-        st.download_button("Download Sample Inspection", sample_insp_bytes, file_name="inspection.pdf")
+        with colA:
+            st.markdown("**Inspection Report**")
+            with open(sample_insp, "rb") as f:
+                sample_insp_bytes = f.read()
+            st.download_button("Download Sample Inspection", sample_insp_bytes, file_name="inspection.pdf")
 
-    with colB:
-        st.markdown("**Thermal Report**")
-        with open(sample_therm, "rb") as f:
-            sample_therm_bytes = f.read()
-        st.download_button("Download Sample Thermal", sample_therm_bytes, file_name="thermal.pdf")
+        with colB:
+            st.markdown("**Thermal Report**")
+            with open(sample_therm, "rb") as f:
+                sample_therm_bytes = f.read()
+            st.download_button("Download Sample Thermal", sample_therm_bytes, file_name="thermal.pdf")
+    else:
+        st.warning("Sample PDF files are missing from the data folder, so preview is unavailable.")
 
 # ---------------- Run Pipeline ----------------
 if st.button("🚀 Generate DDR Report"):
