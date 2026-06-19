@@ -1,32 +1,36 @@
-# 🏠 UrbanRoof AI – DDR Report Generation System  
-### (AI Generalist | Applied AI Builder Assignment Submission)
+# 🏠 UrbanRoof AI – DDR Report Generation System
+
+### (AI/ML Intern – Applied AI & Creative Systems Assessment Submission)
 
 ---
 
 ## 🌐 Live Application Preview
 
-👉 https://urbanroof-ai-automated-ddr-report-generation-system.streamlit.app/
+👉 Live Demo:
+https://super-space-dollop-9v5g7pj4rvw39vx5-8501.app.github.dev/
 
-[![Open App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://urbanroof-ai-automated-ddr-report-generation-system.streamlit.app/)
+🎥 Loom Walkthrough:
+https://www.loom.com/share/6a4fa08b750942bfb4228b4a931f22f0
 
 ---
 
 > 🚀 Live AI system that converts raw inspection reports into structured DDR outputs in real-time.
+
 ---
 
 ## 👨‍💻 Candidate Details
 
 **Name:** Chitranshu Sanket
+
 🔗 LinkedIn: https://www.linkedin.com/in/chitranshu-sanket/
-📄 Resume: https://drive.google.com/file/d/1gkgY-MTst3mQF0F2KCjqpsjxFKlq5BWJ/view
 
 ---
 
 ## 📌 Assignment Context
 
-This project was developed as part of the **AI Generalist | Applied AI Builder Assignment**.
+This project was developed as part of the **AI/ML Intern – Applied AI & Creative Systems Assessment**.
 
-### 🎯 Objective (as per assignment)
+### 🎯 Objective
 
 To design and build an AI system that:
 
@@ -40,7 +44,7 @@ To design and build an AI system that:
 
 I developed an **end-to-end AI pipeline** that:
 
-* Extracts information from inspection & thermal reports
+* Extracts information from inspection and thermal reports
 * Structures unorganized text into meaningful categories
 * Applies reasoning to infer root causes and severity
 * Generates a **client-ready Detailed Diagnostic Report (DDR)**
@@ -56,15 +60,15 @@ Instead of relying purely on LLMs, I built a:
 This ensures:
 
 * Reliability
-* No hallucination
-* Consistent output
+* Reduced hallucinations
+* Consistent outputs
 * Better control over reasoning
 
 ---
 
 ## ⚙️ System Architecture
 
-```id="g0c6tr"
+```text
 PDF Input
    ↓
 Text & Image Extraction (PyMuPDF)
@@ -86,60 +90,49 @@ Streamlit Interface
 
 ## 🔍 How This Solves the Assignment Task
 
-### ✔ Requirement: Extract relevant observations
+### ✔ Extract Relevant Observations
 
-→ Implemented using custom parsing + keyword grouping
+* Custom parsing and keyword grouping
+* Area-wise issue extraction
 
----
+### ✔ Combine Inspection & Thermal Data
 
-### ✔ Requirement: Combine inspection + thermal data
+* Unified structured data model
+* Merging of observations from multiple report sources
 
-→ Merged both sources into unified structured JSON
+### ✔ Avoid Duplicate Findings
 
----
+* Deduplication logic during preprocessing
 
-### ✔ Requirement: Avoid duplicate points
+### ✔ Handle Missing or Conflicting Data
 
-→ Deduplication logic applied during structuring
+* Explicit conflict detection
+* Missing information highlighted in final report
 
----
+### ✔ Client-Friendly Report Generation
 
-### ✔ Requirement: Handle missing/conflicting data
+* Structured DDR format
+* Readable and actionable output
 
-→ Explicit conflict detection logic
-→ Missing data handled with fallback messaging
+### ✔ Include Images
 
----
+* Images extracted from PDFs
+* Associated with relevant observations
+* Fallback handling when images are unavailable
 
-### ✔ Requirement: Client-friendly report
+### ✔ Prevent Hallucinated Information
 
-→ Clean Markdown DDR output
-→ Structured and readable format
+* Rule-based reasoning relies only on extracted evidence
+* LLM used solely for report refinement
 
----
+### ✔ Generalize to Similar Reports
 
-### ✔ Requirement: Include images
-
-→ Images extracted from PDFs
-→ Mapped to corresponding areas
-→ Fallback: "Image Not Available"
-
----
-
-### ✔ Requirement: Do NOT invent facts
-
-→ Rule-based reasoning strictly uses extracted data
+* Keyword-driven and structure-aware processing
+* Not hardcoded to specific sample files
 
 ---
 
-### ✔ Requirement: Generalize to similar reports
-
-→ Keyword-based + structure-based approach
-→ Not hardcoded to specific files
-
----
-
-## 📊 Output Structure (DDR)
+## 📊 DDR Output Structure
 
 The generated report includes:
 
@@ -157,62 +150,60 @@ The generated report includes:
 
 ### 1. Extraction Layer
 
-* PyMuPDF for text + image extraction
-
----
+* PyMuPDF for text extraction
+* Image extraction from source PDFs
 
 ### 2. Structuring Engine
 
-* Converts raw text into structured JSON
-* Area-based grouping
-* Noise filtering & cleaning
-
----
+* Converts raw content into structured JSON
+* Area-wise grouping and cleaning
+* Noise reduction and normalization
 
 ### 3. Validation Layer
 
-* Pydantic ensures schema consistency
-* Prevents pipeline failure
+* Pydantic schema validation
+* Consistent output structure
+* Improved pipeline reliability
 
----
+### 4. Reasoning Engine
 
-### 4. Reasoning Engine (Key Highlight)
+#### Rule-Based Intelligence
 
-#### Rule-Based Intelligence:
+Detects patterns such as:
 
-* Detects patterns:
+* Dampness
+* Leakage
+* Cracks
+* Water ingress
+* Structural concerns
 
-  * Dampness
-  * Leakage
-  * Cracks
-* Infers:
+Infers:
 
-  * Root cause
-  * Severity
-  * Recommendations
+* Root causes
+* Severity levels
+* Recommended actions
 
-#### LLM Usage (Groq):
+#### LLM Integration (Groq)
 
-* Used ONLY for:
+Used only for:
 
-  * Language refinement
-  * Output polishing
-
----
+* Language refinement
+* Report polishing
+* Readability enhancement
 
 ### 5. Report Generator
 
-* Produces clean Markdown DDR
-* Ensures structured, client-ready format
+* Generates clean Markdown DDR reports
+* Maintains a consistent and professional structure
 
----
+### 6. User Interface
 
-### 6. UI Layer (Streamlit)
+Built with Streamlit:
 
-* Upload PDFs OR use sample data
-* Preview reports
-* Download outputs
-* View structured JSON
+* Upload PDF reports
+* Run DDR generation
+* View extracted structured data
+* Download generated reports
 
 ---
 
@@ -223,59 +214,71 @@ The generated report includes:
 * PyMuPDF
 * Pydantic
 * Groq API
-* Custom Rule-Based Logic
+* Custom Rule-Based Reasoning Engine
 
 ---
 
 ## 🎯 Evaluation Criteria Mapping
 
-| Criteria                  | Implementation                     |
-| ------------------------- | ---------------------------------- |
-| Accuracy                  | Structured extraction + validation |
-| Logical merging           | Combined inspection + thermal      |
-| Missing/conflict handling | Explicit logic                     |
-| Clarity                   | Clean DDR output                   |
-| System thinking           | Modular pipeline design            |
+| Criteria                  | Implementation                          |
+| ------------------------- | --------------------------------------- |
+| Accuracy                  | Structured extraction + validation      |
+| Logical Merging           | Combined inspection and thermal reports |
+| Missing/Conflict Handling | Explicit rule-based handling            |
+| Clarity                   | Clean DDR output                        |
+| System Thinking           | Modular AI pipeline                     |
 
 ---
 
-## ⚠️ Limitations
+## ⚠️ Current Limitations
 
 * Image mapping is heuristic-based
-* No OCR for scanned PDFs
-* Thermal data may be incomplete
+* OCR is not implemented for scanned PDFs
+* Thermal report quality affects extraction accuracy
+* Reasoning rules can be expanded for broader coverage
 
 ---
 
 ## 🚀 Future Improvements
 
-* OCR integration
-* Semantic image mapping
-* API-based deployment
-* Advanced anomaly detection
+* OCR integration for scanned reports
+* Advanced image-to-observation mapping
+* API deployment for enterprise workflows
+* Enhanced anomaly detection
+* Multi-report comparison support
 
 ---
 
 ## 🎥 Submission Links
 
-* 🔗 GitHub Repo: *https://github.com/Chitranshu0/UrbanRoof-AI-Automated-DDR-Report-Generation-System*
-* 🌐 Live Demo: *https://urbanroof-ai-automated-ddr-report-generation-system.streamlit.app/*
+### 🔗 GitHub Repository
+
+https://github.com/Chitranshu0/UrbanRoof-AI-Automated-DDR-Report-Generation-System
+
+### 🌐 Live Demo
+
+https://super-space-dollop-9v5g7pj4rvw39vx5-8501.app.github.dev/
+
+### 🎥 Loom Demonstration
+
+https://www.loom.com/share/6a4fa08b750942bfb4228b4a931f22f0
 
 ---
 
 ## 💡 Key Learning
 
-This project reflects my ability to:
+This project demonstrates my ability to:
 
-* Design real-world AI pipelines
-* Balance rule-based logic with LLMs
-* Handle messy and incomplete data
-* Focus on reliability over complexity
+* Design practical AI systems
+* Build reliable data processing pipelines
+* Combine rule-based reasoning with LLM capabilities
+* Handle messy and incomplete real-world data
+* Focus on robustness and maintainability
 
 ---
 
 ## 🙌 Final Note
 
-This assignment helped me demonstrate not just AI usage, but **how to think, design, and build practical AI systems**.
+This assessment was an opportunity to demonstrate not only AI implementation skills but also system design thinking, reliability-focused engineering, and practical problem-solving. The solution prioritizes structured reasoning, maintainability, and real-world applicability over complexity for complexity’s sake.
 
 ---
